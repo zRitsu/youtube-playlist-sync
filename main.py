@@ -145,7 +145,7 @@ def run():
             for yt_id, track in new_tracks.items():
                 new_args = deepcopy(ytdl_download_args)
 
-                new_args['outtmpl'] = f'%(tempdir)s/{track}.%(ext)s'
+                new_args['outtmpl'] = os.path.join(temp_dir, f"{track}") + '.%(ext)s'
 
                 ytdl_args_list.append([new_tracks[yt_id], yt_id, new_args, f"./playlists/{playlist_name} - {playlist_id}"])
 
@@ -160,7 +160,7 @@ def download_video(name: str, yt_id: str, args, final_dir: str):
     logging.info(f"Baixando: {name}")
     with yt_dlp.YoutubeDL(args) as ytdl:
         ytdl.extract_info(url=f"https://www.youtube.com/watch?v={yt_id}")
-    os.rename(f"{temp_dir}/{name}.mp3",f"{final_dir}/{name}.mp3")
+    shutil.move(os.path.join(temp_dir, f"{name}.mp3"),f"{final_dir}/{name}.mp3")
     time.sleep(3)
 
 if __name__ == '__main__':
