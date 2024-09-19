@@ -57,6 +57,7 @@ def run():
 
     if not check_ffmpeg_command():
         ytdl_download_args["ffmpeg_location"] = check_ffmpeg()
+        check_ffmpeg_command(ytdl_download_args["ffmpeg_location"], raise_exception=True)
 
     os.makedirs("./playlists", exist_ok=True)
     os.makedirs("./playlists.old", exist_ok=True)
