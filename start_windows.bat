@@ -9,6 +9,7 @@ if not errorlevel 1 (
 )
 
 if not exist venv (
+    echo Criando virtualenv (Aguarde...)
     %python_cmd% -m venv venv
     call "venv\Scripts\activate"
     pip install -r requirements.txt
