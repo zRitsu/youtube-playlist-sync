@@ -161,7 +161,10 @@ def download_video(name: str, yt_id: str, args, final_dir: str):
     logging.info(f"Baixando: {name}")
     with yt_dlp.YoutubeDL(args) as ytdl:
         ytdl.extract_info(url=f"https://www.youtube.com/watch?v={yt_id}")
-    shutil.move(os.path.join(temp_dir, f"{name}.mp3"),f"{final_dir}/{name}.mp3")
+    try:
+        shutil.move(os.path.join(temp_dir, f"{name}.mp3"),f"{final_dir}/{name}.mp3")
+    except FileNotFoundError:
+        pass
     time.sleep(3)
 
 if __name__ == '__main__':
