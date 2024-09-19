@@ -19,11 +19,12 @@ yt_playlist_regex = re.compile(r'(https?://)?(www\.)?(youtube\.com|music\.youtub
 temp_dir = gettempdir()
 
 ytdl_download_args = {
-    'format': 'bestaudio/best',
-    'ignoreerrors': True,
+    'format': 'bestaudio',
+    'ignoreerrors': False,
     'quiet': True,
     'retries': 30,
     'writethumbnail': True,
+    'extract_flat': False,
     'extractor_args': {
         'youtube': {
             'skip': [
@@ -33,7 +34,6 @@ ytdl_download_args = {
         },
         'youtubetab': ['webpage']
     },
-    'extract_flat': False,
     'postprocessors': [
         {'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'},
         {'key': 'FFmpegMetadata', 'add_metadata': 'True'},
@@ -69,6 +69,7 @@ def run():
                     'no_warnings': True,
                     'lazy_playlist': True,
                     'simulate': True,
+                    'skip_download': True,
                     'allowed_extractors': [
                         r'.*youtube.*',
                     ],
@@ -110,7 +111,12 @@ def run():
 
             tnd = len(str(len(data["entries"])))
 
-            new_tracks = {t["id"]: f"{c+1:0{tnd}d}) {sanitize_filename(t['title'])} - {t['id']}" for c, t in enumerate(data["entries"]) if t['title'] != '[Deleted video]' and t['title'] != '[Private video]'}
+            new_tracks = {
+                t["id"]: {
+                    "filename": f"{c+1:0{tnd}d}) {sanitize_filename(t['title'])} - {t['id']}",
+                    "name": f"{t['title']}",
+                } for c, t in enumerate(data["entries"]) if not t["live_status"] and not t["live_status"]
+            }
 
             if not selected_dir:
                 os.makedirs(f"./playlists/{playlist_name} - {playlist_id}")
@@ -131,24 +137,32 @@ def run():
                         del new_tracks[yt_id]
                         if t != name:
                             os.rename(f"./playlists/{playlist_name} - {playlist_id}/{f}",
-                                      f"./playlists/{playlist_name} - {playlist_id}/{t}.mp3")
+                                      f"./playlists/{playlist_name} - {playlist_id}/{t['filename']}.mp3")
 
                     else:
-                        if not os.path.isdir(f"./.playlists.old/{playlist_name} - {playlist_id}"):
-                            os.makedirs(f"./.playlists.old/{playlist_name} - {playlist_id}")
 
-                        elif f.endswith(".mp3"):
+                        if f.endswith(".mp3"):
+                            os.makedirs(f"./playlists.old/{playlist_name} - {playlist_id}", exist_ok=True)
                             shutil.move(f"./playlists/{playlist_name} - {playlist_id}/{f}",
                                       f"./playlists.old/{playlist_name} - {playlist_id}/{f}")
 
             ytdl_args_list = []
             
             for yt_id, track in new_tracks.items():
+
+                if track['name'] == '[Deleted video]':
+                    print(f"Video deletado: https://www.youtube.com/watch?v={yt_id}")
+                    continue
+
+                if track['name'] == '[Private video]':
+                    print(f"Video privado: https://www.youtube.com/watch?v={yt_id}")
+                    continue
+
                 new_args = deepcopy(ytdl_download_args)
 
-                new_args['outtmpl'] = os.path.join(temp_dir, f"{track}") + '.%(ext)s'
+                new_args['outtmpl'] = os.path.join(temp_dir, f"{track['filename']}") + '.%(ext)s'
 
-                ytdl_args_list.append([new_tracks[yt_id], yt_id, new_args, f"./playlists/{playlist_name} - {playlist_id}"])
+                ytdl_args_list.append([new_tracks[yt_id]["name"], yt_id, new_args, f"./playlists/{playlist_name} - {playlist_id}"])
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
                 futures = [executor.submit(download_video, *args) for args in ytdl_args_list]
@@ -158,14 +172,24 @@ def run():
             time.sleep(10)
 
 def download_video(name: str, yt_id: str, args, final_dir: str):
-    logging.info(f"Baixando: {name}")
-    with yt_dlp.YoutubeDL(args) as ytdl:
-        ytdl.extract_info(url=f"https://www.youtube.com/watch?v={yt_id}")
+    logging.info(f"Baixando: [{yt_id}] -> {name}")
+
+    filepath = None
+
     try:
-        shutil.move(os.path.join(temp_dir, f"{name}.mp3"),f"{final_dir}/{name}.mp3")
-    except FileNotFoundError:
-        pass
+        with yt_dlp.YoutubeDL(args) as ytdl:
+            r = ytdl.extract_info(url=f"https://www.youtube.com/watch?v={yt_id}")
+            filepath = r['requested_downloads'][0]['filepath']
+    except Exception as e:
+        logging.info(f"Erro ao baixar: [{yt_id}] -> {name} | {repr(e)}")
+
     time.sleep(3)
+
+    if filepath:
+        try:
+            shutil.move(filepath, f"{final_dir}/{os.path.basename(filepath)}")
+        except FileNotFoundError:
+            pass
 
 if __name__ == '__main__':
     run()
