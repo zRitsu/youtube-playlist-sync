@@ -52,7 +52,8 @@ def run():
     except FileNotFoundError:
         with open("playlists.txt", "w") as f:
             f.write("")
-        print("Abra o arquivo playlists.txt e cole os links das suas playlists do youtube (apenas playlists públicas ou com visibilidade desativada, não há suporte para playlists privadas no momento).")
+        print("Abra o arquivo playlists.txt e cole os links das suas playlists do youtube (apenas playlists públicas "
+              "ou com visibilidade desativada, não há suporte para playlists privadas no momento).")
         return
 
     if not check_ffmpeg_command():
@@ -62,6 +63,15 @@ def run():
     os.makedirs("./playlists", exist_ok=True)
     os.makedirs("./playlists.old", exist_ok=True)
 
+    try:
+        shutil.copy("cookies.txt", "cookies.temp")
+        cookie_file = "./cookies.temp"
+        print("Usando cookies.txt para obter videos de playlists privadas.")
+    except FileNotFoundError:
+        cookie_file = None
+        print("Uso de cookies.txt ignorado (caso tenha adicionado link de alguma playlist privada da sua conta no "
+              "arquivo playlists.txt ela será ignorada com erro de playlist inexistente).")
+
     with yt_dlp.YoutubeDL(
                 {
                     'extract_flat': True,
@@ -70,6 +80,7 @@ def run():
                     'lazy_playlist': True,
                     'simulate': True,
                     'skip_download': True,
+                    'cookiefile': cookie_file,
                     'allowed_extractors': [
                         r'.*youtube.*',
                     ],
@@ -170,6 +181,11 @@ def run():
                     future.result()
 
             time.sleep(10)
+
+    try:
+        os.remove("cookies.temp")
+    except FileNotFoundError:
+        pass
 
 def download_video(name: str, yt_id: str, args, final_dir: str):
     logging.info(f"Baixando: [{yt_id}] -> {name}")
