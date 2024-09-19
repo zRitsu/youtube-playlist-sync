@@ -1,16 +1,25 @@
+import logging
 import os
 import re
 import shutil
+import time
 import traceback
+import concurrent.futures
+from copy import deepcopy
+from tempfile import gettempdir
 
 import yt_dlp
 
 from ffmpeg_check import check_ffmpeg_command, check_ffmpeg
 
+logging.basicConfig(level=logging.INFO, format='%(message)s')
+
 yt_playlist_regex = re.compile(r'(https?://)?(www\.)?(youtube\.com|music\.youtube\.com)/.*list=([a-zA-Z0-9_-]+)')
 
+temp_dir = gettempdir()
+
 ytdl_download_args = {
-    'format': 'bestaudio',
+    'format': 'bestaudio/best',
     'ignoreerrors': True,
     'quiet': True,
     'retries': 30,
@@ -39,7 +48,7 @@ def run():
 
     try:
         with open("playlists.txt") as f:
-            playlists = set([p for p in f.read().replace(" ", "\n").split("\n") if p])
+            playlists = sorted(list(set([p for p in f.read().replace(" ", "\n").split("\n") if p])))
     except FileNotFoundError:
         with open("playlists.txt", "w") as f:
             f.write("")
@@ -49,11 +58,8 @@ def run():
     if not check_ffmpeg_command():
         ytdl_download_args["ffmpeg_location"] = check_ffmpeg()
 
-    if not os.path.isdir("./playlists"):
-        os.makedirs("./playlists")
-
-    if not os.path.isdir("./playlists.old"):
-        os.makedirs("./playlists.old")
+    os.makedirs("./playlists", exist_ok=True)
+    os.makedirs("./playlists.old", exist_ok=True)
 
     with yt_dlp.YoutubeDL(
                 {
@@ -103,23 +109,16 @@ def run():
 
             tnd = len(str(len(data["entries"])))
 
-            new_tracks = {t["id"]: f"{c+1:0{tnd}d}) {sanitize_filename(t['title'])} - {t['id']}" for c, t in enumerate(data["entries"])}
+            new_tracks = {t["id"]: f"{c+1:0{tnd}d}) {sanitize_filename(t['title'])} - {t['id']}" for c, t in enumerate(data["entries"]) if t['title'] != '[Deleted video]' and t['title'] != '[Private video]'}
 
             if not selected_dir:
                 os.makedirs(f"./playlists/{playlist_name} - {playlist_id}")
             else:
+
                 for f in os.listdir(f"./playlists/{playlist_name} - {playlist_id}"):
 
                     if not f.endswith(".mp3"):
-
-                        if f.endswith((".part", ".webm")):
-                            try:
-                                os.remove(f"./playlists/{playlist_name} - {playlist_id}/{f}")
-                                os.remove(f"./playlists/{playlist_name} - {playlist_id}/{f[:-5]}.mp3")
-                            except FileNotFoundError:
-                                pass
-                        else:
-                            continue
+                        continue
 
                     filename = f[:-4].split(" - ")
 
@@ -137,14 +136,32 @@ def run():
                         if not os.path.isdir(f"./.playlists.old/{playlist_name} - {playlist_id}"):
                             os.makedirs(f"./.playlists.old/{playlist_name} - {playlist_id}")
 
-                        shutil.move(f"./playlists/{playlist_name} - {playlist_id}/{f}",
+                        elif f.endswith(".mp3"):
+                            shutil.move(f"./playlists/{playlist_name} - {playlist_id}/{f}",
                                       f"./playlists.old/{playlist_name} - {playlist_id}/{f}")
 
+            ytdl_args_list = []
+            
             for yt_id, track in new_tracks.items():
-                ytdl_download_args['outtmpl'] = f'./playlists/{playlist_name} - {playlist_id}/{track}.%(ext)s'
-                print(f"{playlist_name} -> Baixando: {new_tracks[yt_id]}")
-                with yt_dlp.YoutubeDL(ytdl_download_args) as ytdl:
-                    ytdl.extract_info(url=f"https://www.youtube.com/watch?v={yt_id}")
+                new_args = deepcopy(ytdl_download_args)
+
+                new_args['outtmpl'] = f'%(tempdir)s/{track}.%(ext)s'
+
+                ytdl_args_list.append([new_tracks[yt_id], yt_id, new_args, f"./playlists/{playlist_name} - {playlist_id}"])
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                futures = [executor.submit(download_video, *args) for args in ytdl_args_list]
+                for future in concurrent.futures.as_completed(futures):
+                    future.result()
+
+            time.sleep(10)
+
+def download_video(name: str, yt_id: str, args, final_dir: str):
+    logging.info(f"Baixando: {name}")
+    with yt_dlp.YoutubeDL(args) as ytdl:
+        ytdl.extract_info(url=f"https://www.youtube.com/watch?v={yt_id}")
+    os.rename(f"{temp_dir}/{name}.mp3",f"{final_dir}/{name}.mp3")
+    time.sleep(3)
 
 if __name__ == '__main__':
     run()
