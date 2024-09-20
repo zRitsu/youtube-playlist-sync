@@ -14,13 +14,13 @@ from ffmpeg_check import check_ffmpeg_command, check_ffmpeg
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-yt_playlist_regex = re.compile(r'(https?://)?(www\.)?(youtube\.com|music\.youtube\.com)/.*list=([a-zA-Z0-9_-]+)')
+yt_playlist_regex = re.compile(r'(?<=list=)[a-zA-Z0-9_-]+')
 
 temp_dir = gettempdir()
 
 ytdl_download_args = {
     'format': 'bestaudio',
-    'ignoreerrors': False,
+    'ignoreerrors': True,
     'quiet': True,
     'retries': 30,
     'writethumbnail': True,
@@ -31,6 +31,11 @@ ytdl_download_args = {
                 'hls',
                 'dash'
             ],
+            'player_skip': [
+                'js',
+                'configs',
+                'webpage'
+            ]
         },
         'youtubetab': ['webpage']
     },
@@ -48,7 +53,7 @@ def run():
 
     try:
         with open("playlists.txt") as f:
-            playlists = sorted(list(set([p for p in f.read().replace(" ", "\n").split("\n") if p])))
+            playlists = sorted(list(set([p for p in yt_playlist_regex.findall(f.read())])))
     except FileNotFoundError:
         with open("playlists.txt", "w") as f:
             f.write("")
@@ -87,14 +92,10 @@ def run():
                 }
             ) as ydl:
 
-        for url in playlists:
-
-            if not yt_playlist_regex.match(url):
-                print(f"Link de playlist inválido: {url}")
-                continue
+        for yt_pl_id in playlists:
 
             try:
-                data = ydl.extract_info(url, download=False)
+                data = ydl.extract_info(f"https://www.youtube.com/playlist?list={yt_pl_id}", download=False)
             except Exception:
                 traceback.print_exc()
                 continue
