@@ -150,6 +150,7 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
     if only_audio:
         old_dir = "./playlists_audio.old"
         ext = "mp3"
+        media_txt = "Áudios"
         ytdl_download_args_final.update(
             {
                 'format': 'bestaudio',
@@ -161,8 +162,10 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
             }
         )
     else:
+
         old_dir = "./playlists_video.old"
         ext = "mp4"
+        media_txt = "Vídeos"
         ytdl_download_args_final.update(
             {
                 'format': 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]',
@@ -182,7 +185,7 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
         if not data:
 
-            print(f"Obtendo informações da playlist: https://www.youtube.com/playlist?list={yt_pl_id}")
+            print(f"\nObtendo informações da playlist: https://www.youtube.com/playlist?list={yt_pl_id}")
 
             with yt_dlp.YoutubeDL(
                     {
@@ -210,7 +213,7 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
         playlist_name = sanitize_filename(data["title"])
         playlist_id = data["id"]
 
-        print("\n" + "#"*(pn:=len(playlist_name) + 50) + "\n### Sincronizando playlist" + (" (Áudios)" if only_audio else " (Vídeos)")+ f":\n### {playlist_name} [ID: {playlist_id}]\n" + "#"*pn + "\n")
+        print("\n" + "#"*(pn:=len(playlist_name) + 50) + f"\n### Sincronizando playlist ({media_txt}):\n### {playlist_name} [ID: {playlist_id}]\n" + "#"*pn + "\n")
 
         # mover pastas que estão no padrão da versão anterior desse script.
         for dir_ in os.listdir(out_dir):
