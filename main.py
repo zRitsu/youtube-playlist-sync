@@ -98,6 +98,7 @@ def run():
     try:
         with open("playlists_audio_directory.txt") as f:
             playlists_audio_directory = [l for l in f.read().split("\n") if l][0]
+            os.makedirs(playlists_audio_directory, exist_ok=True)
             if not os.path.isdir(os.path.abspath(playlists_audio_directory)):
                 raise Exception(f"O diretório não existe: {playlists_audio_directory}")
     except (IndexError, FileNotFoundError):
@@ -116,6 +117,7 @@ def run():
     try:
         with open("playists_video_directory.txt") as f:
             playist_video_directory = [l for l in f.read().split("\n") if l][0]
+            os.makedirs(playist_video_directory)
             if not os.path.isdir(os.path.abspath(playist_video_directory)):
                 raise Exception(f"O diretório não existe: {playist_video_directory}")
     except (IndexError, FileNotFoundError):
