@@ -42,14 +42,29 @@ ytdl_download_args = {
 
 playlist_data = {}
 
+track_ids = set()
+
 m3u_data = {}
 
-def save_m3u(out_dir: str):
 
+def save_m3u(out_dir: str):
     with open(out_dir, 'w', encoding="utf-8") as f:
         f.write("\n\n".join(m3u_data.values()))
 
-def move_dir(src: str, dst:str):
+
+def make_dirs(dst: str):
+    if os.path.isfile(dst):
+        os.remove(dst)
+
+    try:
+        os.makedirs(os.path.normcase(dst))
+    except FileExistsError:
+        pass
+
+
+def move_dir(src: str, dst: str):
+    make_dirs(dst)
+
     for i in os.listdir(src):
         try:
             shutil.move(f"{src}/{i}", dst)
@@ -62,7 +77,6 @@ def sanitize_filename(filename: str) -> str:
     return re.sub(r'[<>:"/\\|?*]', '-', filename).rstrip('. ')
 
 def run():
-
     if not check_ffmpeg_command():
         ytdl_download_args["ffmpeg_location"] = check_ffmpeg()
         check_ffmpeg_command(ytdl_download_args["ffmpeg_location"], raise_exception=True)
@@ -84,8 +98,11 @@ def run():
     if os.path.isfile("./playlists.txt"):
         os.rename("./playlists.txt", "./playlists_links_audio.txt")
 
-    if os.path.isdir("./playlists.old"):
-        move_dir("./playlists.old", "./playlists_audio.old")
+    if os.path.isdir("./playlists_audio.old"):
+        move_dir("./playlists_audio.old", "./playlists.old")
+
+    if os.path.isdir("./playlists_video.old"):
+        move_dir("./playlists_video.old", "./playlists.old")
 
     try:
         with open("./playlists_links_audio.txt") as f:
@@ -98,7 +115,7 @@ def run():
     try:
         with open("playlists_audio_directory.txt") as f:
             playlists_audio_directory = [l for l in f.read().split("\n") if l][0]
-            os.makedirs(playlists_audio_directory, exist_ok=True)
+            make_dirs(playlists_audio_directory)
             if not os.path.isdir(os.path.abspath(playlists_audio_directory)):
                 raise Exception(f"O diretório não existe: {playlists_audio_directory}")
     except (IndexError, FileNotFoundError):
@@ -117,7 +134,7 @@ def run():
     try:
         with open("playists_video_directory.txt") as f:
             playist_video_directory = [l for l in f.read().split("\n") if l][0]
-            os.makedirs(playist_video_directory)
+            make_dirs(playist_video_directory)
             if not os.path.isdir(os.path.abspath(playist_video_directory)):
                 raise Exception(f"O diretório não existe: {playist_video_directory}")
     except (IndexError, FileNotFoundError):
@@ -142,15 +159,15 @@ def run():
 
 
 def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
-
-    os.makedirs(out_dir, exist_ok=True)
+    make_dirs(out_dir)
 
     ytdl_download_args_final = deepcopy(ytdl_download_args)
 
+    old_dir = "./deleted"
+
     if only_audio:
-        old_dir = "./playlists_audio.old"
         ext = "mp3"
-        media_txt = "Áudios"
+        media_txt = "áudio"
         ytdl_download_args_final.update(
             {
                 'format': 'bestaudio',
@@ -162,10 +179,8 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
             }
         )
     else:
-
-        old_dir = "./playlists_video.old"
         ext = "mp4"
-        media_txt = "Vídeos"
+        media_txt = "vídeo"
         ytdl_download_args_final.update(
             {
                 'format': 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]',
@@ -177,7 +192,40 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
             }
         )
 
-    os.makedirs(old_dir, exist_ok=True)
+    make_dirs(old_dir)
+
+    make_dirs(f"{out_dir}/.synced_playlist_data/")
+
+    # TODO: Remover esse trecho no dia 26/07
+    for fscan in (".synced_playlist_data_mp3", ".synced_playlist_data_mp4"):
+
+        if not os.path.isdir(f"{out_dir}/{fscan}"):
+            continue
+
+        for d in os.listdir(f"{out_dir}/{fscan}/"):
+            for raiz, _, arquivos in os.walk(f"{out_dir}/{fscan}/{d}"):
+                for arquivo in arquivos:
+                    if arquivo.endswith(('.mp3', '.mp4')):
+                        try:
+                            shutil.move(os.path.join(raiz, arquivo), f"{out_dir}/.synced_playlist_data/")
+                        except Exception as e:
+                            if not str(e).endswith("already exists"):
+                                raise e
+
+        shutil.rmtree(f"{out_dir}/{fscan}")
+
+    for od in os.listdir(old_dir):
+        if not os.path.isdir(f"{old_dir}/{od}"):
+            continue
+        for d in os.listdir(f"{old_dir}/{od}/"):
+            for raiz, _, arquivos in os.walk(f"{old_dir}/{od}/{d}"):
+                for arquivo in arquivos:
+                    if arquivo.endswith(('.mp3', '.mp4')):
+                        try:
+                            shutil.move(os.path.join(raiz, arquivo), old_dir)
+                        except Exception as e:
+                            if not str(e).endswith("already exists"):
+                                raise e
 
     for yt_pl_id in file_list:
 
@@ -213,23 +261,15 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
         playlist_name = sanitize_filename(data["title"])
         playlist_id = data["id"]
 
-        print("\n" + "#"*(pn:=len(playlist_name) + 50) + f"\n### Sincronizando playlist ({media_txt}):\n### {playlist_name} [ID: {playlist_id}]\n" + "#"*pn + "\n")
+        make_dirs(f"{out_dir}/.synced_playlist_data/")
 
-        # mover pastas que estão no padrão da versão anterior desse script.
+        print("\n" + "#" * (pn := len(
+            playlist_name) + 50) + f"\n### Sincronizando {media_txt}s da playlist:\n### {playlist_name} [ID: {playlist_id}]\n" + "#" * pn + "\n")
+
         for dir_ in os.listdir(out_dir):
-
             if dir_.endswith(".m3u"):
                 if playlist_id in dir_ and os.path.isfile(f"{out_dir}/{dir_}"):
                     os.remove(f"{out_dir}/{dir_}")
-                continue
-
-            if not os.path.isdir(f"{out_dir}/{dir_}"):
-                continue
-            if playlist_id in dir_:
-                os.makedirs(f"{out_dir}/.synced_playlist_data_{ext}/{playlist_id}", exist_ok=True)
-                print(f"Movendo pasta: {dir_}\nPara  -> {out_dir}.synced_playlist_data_{ext}/{playlist_id}")
-                move_dir(f"{out_dir}/{dir_}", f"{out_dir}/.synced_playlist_data_{ext}/{playlist_id}")
-                break
 
         new_tracks = {
             t["id"]: {
@@ -239,13 +279,13 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
             } for c, t in enumerate(data["entries"]) if not t["live_status"] and not t["live_status"]
         }
 
-        playlist_dir = f"{out_dir}/.synced_playlist_data_{ext}/{playlist_id}"
+        synced_dir = f"{out_dir}/.synced_playlist_data"
 
-        os.makedirs(playlist_dir, exist_ok=True)
+        make_dirs(f"{synced_dir}/")
 
-        for f in os.listdir(playlist_dir):
+        for f in os.listdir(synced_dir):
 
-            if not f.endswith(f".{ext}") or not os.path.isfile(f"{playlist_dir}/{f}"):
+            if not f.endswith(f".{ext}") or not os.path.isfile(f"{synced_dir}/{f}"):
                 continue
 
             try:
@@ -253,45 +293,56 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
             except AttributeError:
                 yt_id = None
 
-            if not yt_id or not new_tracks.get(yt_id):
-                os.makedirs(f"{old_dir}/{playlist_id}", exist_ok=True)
-                shutil.move(f"{playlist_dir}/{f}", f"{old_dir}/{playlist_id}/{f}")
+            if not yt_id:
+                make_dirs(old_dir)
+                shutil.move(f"{synced_dir}/{f}", f"{old_dir}/{f}")
                 continue
-
-            if not yt_video_regex.match(f):
-                try:
-                    os.rename(f"{playlist_dir}/{f}", f"{playlist_dir}/{yt_id}.{ext}")
-                except FileExistsError:
-                    os.remove(f"{playlist_dir}/{f}")
 
         ytdl_args_list = []
 
+        index = 0
         counter = 0
+        existing = 0
+
+        total_entries = len(new_tracks)
 
         for yt_id, track in new_tracks.items():
 
             if track['name'] == '[Deleted video]':
+                total_entries -= 1
                 print(f"Video deletado: https://www.youtube.com/watch?v={yt_id}")
                 continue
 
             if track['name'] == '[Private video]':
+                total_entries -= 1
                 print(f"Video privado: https://www.youtube.com/watch?v={yt_id}")
                 continue
 
-            counter += 1
+            track_ids.add(yt_id)
 
-            if os.path.isfile(f"{playlist_dir}/{yt_id}.{ext}"):
-                m3u_data[counter] = (f"#EXTINF:{track['duration']},{track['name']} - Por: {track['uploader']}\n"
-                                     f"./.synced_playlist_data_{ext}/{playlist_id}/{yt_id}.{ext}")
-                save_m3u(f"{out_dir}/{sanitize_filename(playlist_name)} - {playlist_id}.m3u")
+            index += 1
+
+            if os.path.isfile(f"{synced_dir}/{yt_id}.{ext}"):
+                total_entries -= 1
+                existing += 1
+                m3u_data[index] = (f"#EXTINF:{track['duration']},{track['name']} - Por: {track['uploader']}\n"
+                                   f"./.synced_playlist_data/{yt_id}.{ext}")
                 continue
 
             new_args = deepcopy(ytdl_download_args_final)
 
-            ytdl_args_list.append([new_tracks[yt_id]["name"], yt_id, new_args, playlist_dir, out_dir, counter, ext, playlist_name, playlist_id])
+            counter += 1
+
+            ytdl_args_list.append(
+                [new_tracks[yt_id]["name"], counter, yt_id, new_args, synced_dir, out_dir, index, ext, playlist_name,
+                 playlist_id, total_entries])
+
+        if existing > 0:
+            save_m3u(f"{out_dir}/{sanitize_filename(playlist_name)} - {playlist_id}.m3u")
+            print(f"{existing} download{'s'[:existing^1]} de {media_txt}{'s'[:existing^1]} existente{'s'[:existing^1]} ignorado{'s'[:existing^1]}.")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            futures = [executor.submit(download_video, *args) for args in ytdl_args_list]
+            futures = [executor.submit(download_video, *args) for n, args in enumerate(ytdl_args_list)]
             for future in concurrent.futures.as_completed(futures):
                 future.result()
 
@@ -304,9 +355,18 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
     except FileNotFoundError:
         pass
 
-def download_video(name: str, yt_id: str, args, playlist_dir: str, out_dir: str, index: int, ext: str,
-                   playlist_name: str, playlist_id: str):
-    logging.info(f"Baixando: [{yt_id}] -> {name}")
+    if os.path.isdir(f"{out_dir}/.synced_playlist_data"):
+        for f in os.listdir(f"{out_dir}/.synced_playlist_data/"):
+            if not f.endswith((".mp3", ".mp4")):
+                continue
+            if f[:-4] not in track_ids:
+                print(f[:-4])
+                shutil.move(f"{out_dir}/.synced_playlist_data/{f}", f"{old_dir}/{f}")
+
+
+def download_video(name: str, counter: int, yt_id: str, args, playlist_dir: str, out_dir: str, index: int, ext: str,
+                   playlist_name: str, playlist_id: str, total_entries: int):
+    logging.info(f"\n[{counter}/{total_entries}] Baixando: [{yt_id}] -> {name}")
 
     filepath = None
 
@@ -315,7 +375,7 @@ def download_video(name: str, yt_id: str, args, playlist_dir: str, out_dir: str,
             r = ytdl.extract_info(url=f"https://www.youtube.com/watch?v={yt_id}")
             filepath = r['requested_downloads'][0]['filepath']
             m3u_data[index] = (f"#EXTINF:{r['duration']},{r['title']} - Por: {r['uploader']}\n"
-                                 f"./.synced_playlist_data_{ext}/{playlist_id}/{yt_id}.{ext}")
+                               f"./.synced_playlist_data/{yt_id}.{ext}")
     except Exception as e:
         logging.info(f"Erro ao baixar: [{yt_id}] -> {name} | {repr(e)}")
 
