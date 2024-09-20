@@ -5,7 +5,7 @@
 * Baixe todo o conteudo desse repositório como zip [clicando aqui](https://github.com/zRitsu/youtube-playlist-sync/archive/refs/heads/main.zip)
 * Extraia e em seguida execute o start_windows.bat (será criado alguns arquivos txt etc)
 * Abra o arquivo playlists_links_audio.txt e nele você coloca os links das suas playlists pra download das músicas em cada linha e salve-o em seguida (no caso de download dos vídeos use o arquivo playlists_links_video.txt).
-* Agora basta apenas executar o start_windows.bat pra sincronizar todas as músicas e vídeos de suas playlists (Não remova o id da playlist que está no nome da pasta e nos arquivos de vídeos e músicas). As playlists em formato m3u serão salvas por padrão na pasta ./playlists_audio e ./playlists_video (você também pode definir um diretorio diferente editando os arquivos playlists_audio_directory.txt e playists_video_directory.txt)
+* Agora basta apenas executar o start_windows.bat pra sincronizar todas as músicas e vídeos de suas playlists (Não remova o id da playlist que está no nome do arquivo m3u). As playlists em formato m3u serão salvas por padrão na pasta ./playlists_audio e ./playlists_video (você também pode definir um diretorio diferente editando os arquivos playlists_audio_directory.txt e playists_video_directory.txt)
 
 **Nota 1:** A cada execução do start_windows.bat será gerado novos arquivos m3u das playlist pra manter a mesma consistencia das playlists que estão no yt (alterações de nomes, ordem de vídeos, adição e remoção de vídeos etc).
 
