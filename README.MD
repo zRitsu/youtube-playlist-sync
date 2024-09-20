@@ -5,20 +5,13 @@
 * Baixe todo o conteudo desse repositório como zip [clicando aqui](https://github.com/zRitsu/youtube-playlist-sync/archive/refs/heads/main.zip)
 * Extraia e em seguida execute o start_windows.bat (será criado o arquivo playlists.txt)
 * Abra o arquivo playlists_links_audio.txt e nele você coloca os links das suas playlists pra download das músicas em cada linha e salve-o em seguida (no caso de download dos vídeos use o arquivo playlists_links_video.txt).
-* Agora basta apenas executar o start_windows.bat pra sincronizar todas as músicas e vídeos de suas playlists (Nota: Não remova o id da playlist que está no nome da pasta e nos arquivos de vídeos e músicas).
+* Agora basta apenas executar o start_windows.bat pra sincronizar todas as músicas e vídeos de suas playlists (Não remova o id da playlist que está no nome da pasta e nos arquivos de vídeos e músicas). As playlists em formato m3u serão salvas por padrão na pasta ./playlists_audio e ./playlists_video (você também pode definir um diretorio diferente editando os arquivos playlists_audio_directory.txt e playists_video_directory.txt)
 
-Nota: A cada execução do start_windows.bat será feito alterações nas pastas e arquivos da playlist pra manter a mesma consistencia da playlist que está no yt (alterações de nomes, ordem de vídeos, adição e remoção de vídeos etc).
+Nota 1: A cada execução do start_windows.bat será feito alterações nas pastas e arquivos da playlist pra manter a mesma consistencia da playlist que está no yt (alterações de nomes, ordem de vídeos, adição e remoção de vídeos etc).
+Nota 2: Caso mova as playlists de pasta você terá que mover também a pasta .synced_playlist_data_mp3/.synced_playlist_data_mp4 (os arquivos m3u tem que estarem na mesma pasta citada). 
 
-## Previews:
+## Preview:
 
-* Arquivos de áudio com tag de info sobre o vídeo e thumb embutida
+* Teste de reprodução da playlist m3u Potplayer com miniatura ativada na lista (pode ser ativado via preferências -> Reprodução > Lista de reprodução e na opção "lista" escolha uma que tenha miniaturas). Nota: alguns outros players como o VLC também tem suporte a thumb.
 
-[![dPsRG24.md.png](https://iili.io/dPsRG24.md.png)](https://freeimage.host/i/dPsRG24)
-
-* Potplayer com miniatura ativada na lista (pode ser ativado via preferências -> Reprodução > Lista de reprodução e na opção "lista" escolha uma que tenha miniaturas). Nota: alguns outros players como o VLC também tem suporte a thumb.
-
-[![dPsluYG.md.png](https://iili.io/dPsluYG.md.png)](https://freeimage.host/i/dPsluYG)
-
-* Arquivos de vídeo com tag e thumb do vídeo original embutido nos arquivos
-
-[![dPsEJ49.md.png](https://iili.io/dPsEJ49.md.png)](https://freeimage.host/i/dPsEJ49)
+[![dPmN641.md.png](https://iili.io/dPmN641.md.png)](https://freeimage.host/i/dPmN641)
