@@ -171,3 +171,7 @@ cython_debug/
 /playlists_audio_directory.txt
 /playlists_links_audio.txt
 /playlists_links_video.txt
+/playlists_audio/
+/playlists_video/
+*.mp3
+*.mp4
