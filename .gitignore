@@ -167,3 +167,7 @@ cython_debug/
 /playlists.old/
 /cookies.txt
 /cookies.temp
+/playists_video_directory.txt
+/playlists_audio_directory.txt
+/playlists_links_audio.txt
+/playlists_links_video.txt
