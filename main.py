@@ -332,20 +332,22 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
             ytdl_args_list.append(
                 [new_tracks[yt_id]["name"], counter, yt_id, new_args, synced_dir, out_dir, index, ext, playlist_name,
-                 playlist_id, total_entries])
+                 playlist_id])
 
         if existing > 0:
             save_m3u(f"{out_dir}/{sanitize_filename(playlist_name)} - {playlist_id}.m3u")
             print(f"{existing} download{'s'[:existing^1]} de {media_txt}{'s'[:existing^1]} existente{'s'[:existing^1]} ignorado{'s'[:existing^1]}.")
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            futures = [executor.submit(download_video, *args) for n, args in enumerate(ytdl_args_list)]
-            for future in concurrent.futures.as_completed(futures):
-                future.result()
+        if not ytdl_args_list:
+            time.sleep(10)
+        else:
+            total_entries = len(ytdl_args_list)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                futures = [executor.submit(download_video, total_entries=total_entries, *args) for n, args in enumerate(ytdl_args_list)]
+                for future in concurrent.futures.as_completed(futures):
+                    future.result()
 
         m3u_data.clear()
-
-        time.sleep(10)
 
     try:
         os.remove("cookies.temp")
