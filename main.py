@@ -98,12 +98,6 @@ def run():
     if os.path.isfile("./playlists.txt"):
         os.rename("./playlists.txt", "./playlists_links_audio.txt")
 
-    if os.path.isdir("./playlists_audio.old"):
-        move_dir("./playlists_audio.old", "./playlists.old")
-
-    if os.path.isdir("./playlists_video.old"):
-        move_dir("./playlists_video.old", "./playlists.old")
-
     try:
         with open("./playlists_links_audio.txt") as f:
             playlists_audio = sorted(list(set([p for p in yt_playlist_regex.findall(f.read())])))
@@ -163,7 +157,10 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
     ytdl_download_args_final = deepcopy(ytdl_download_args)
 
-    old_dir = "./deleted"
+    old_dir = os.path.join(out_dir, f"./.synced_playlist_data/deleted")
+
+    if not os.path.isdir(old_dir):
+        os.makedirs(old_dir)
 
     if only_audio:
         ext = "mp3"
