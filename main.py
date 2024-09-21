@@ -8,6 +8,8 @@ import concurrent.futures
 from copy import deepcopy
 from tempfile import gettempdir
 
+from mutagen.easyid3 import EasyID3
+from mutagen.mp3 import MP3
 import yt_dlp
 
 from ffmpeg_check import check_ffmpeg_command, check_ffmpeg
@@ -38,6 +40,11 @@ ytdl_download_args = {
     },
     'writethumbnail': True,
     'embed-thumbnail': True,
+}
+
+error_messages = {
+    "[Deleted video]": "Vídeo deletado",
+    "[Private video]": "Vídeo privado"
 }
 
 playlist_data = {}
@@ -73,8 +80,10 @@ def move_dir(src: str, dst: str):
                 raise e
     shutil.rmtree(src)
 
+
 def sanitize_filename(filename: str) -> str:
     return re.sub(r'[<>:"/\\|?*]', '-', filename).rstrip('. ')
+
 
 def run():
     if not check_ffmpeg_command():
@@ -305,14 +314,19 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
         for yt_id, track in new_tracks.items():
 
-            if track['name'] == '[Deleted video]':
+            if e_message := error_messages.get(track['name']):
                 total_entries -= 1
-                print(f"Video deletado: https://www.youtube.com/watch?v={yt_id}")
-                continue
-
-            if track['name'] == '[Private video]':
-                total_entries -= 1
-                print(f"Video privado: https://www.youtube.com/watch?v={yt_id}")
+                try:
+                    deleted_file = [p for p in [f"{old_dir}/{yt_id}.{ext}", f"{synced_dir}/{yt_id}.{ext}"] if os.path.isfile(p)][0]
+                except IndexError:
+                    print(f"{e_message}: https://www.youtube.com/watch?v={yt_id}")
+                else:
+                    existing += 1
+                    audio_tag = MP3(deleted_file, ID3=EasyID3)
+                    m3u_data[index] = (f"#EXTINF:{int(audio_tag.info.length)},[{e_message}]: {audio_tag['title'][0]} - "
+                                       f"Por: {audio_tag['artist'][0]}\n"
+                                       f"{old_dir}/{yt_id}.{ext}")
+                    print(f"{e_message} (reaproveitado): https://www.youtube.com/watch?v={yt_id}")
                 continue
 
             track_ids.add(yt_id)
@@ -336,14 +350,16 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
         if existing > 0:
             save_m3u(f"{out_dir}/{sanitize_filename(playlist_name)} - {playlist_id}.m3u")
-            print(f"{existing} download{'s'[:existing^1]} de {media_txt}{'s'[:existing^1]} existente{'s'[:existing^1]} ignorado{'s'[:existing^1]}.")
+            print(
+                f"{existing} download{'s'[:existing ^ 1]} de {media_txt}{'s'[:existing ^ 1]} existente{'s'[:existing ^ 1]} ignorado{'s'[:existing ^ 1]}.")
 
         if not ytdl_args_list:
             time.sleep(10)
         else:
             total_entries = len(ytdl_args_list)
             with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                futures = [executor.submit(download_video, total_entries=total_entries, *args) for n, args in enumerate(ytdl_args_list)]
+                futures = [executor.submit(download_video, total_entries=total_entries, *args) for n, args in
+                           enumerate(ytdl_args_list)]
                 for future in concurrent.futures.as_completed(futures):
                     future.result()
 
@@ -386,6 +402,7 @@ def download_video(name: str, counter: int, yt_id: str, args, playlist_dir: str,
             save_m3u(f"{out_dir}/{sanitize_filename(playlist_name)} - {playlist_id}.m3u")
         except FileNotFoundError:
             pass
+
 
 if __name__ == '__main__':
     run()
