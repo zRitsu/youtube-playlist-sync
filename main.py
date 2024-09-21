@@ -25,6 +25,7 @@ temp_dir = gettempdir()
 ytdl_download_args = {
     'ignoreerrors': False,
     'logtostderr': False,
+    'no_warnings': True,
     'quiet': True,
     'retries': 30,
     'extract_flat': False,
