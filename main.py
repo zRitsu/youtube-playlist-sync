@@ -10,6 +10,7 @@ from tempfile import gettempdir
 
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
+from send2trash import send2trash
 import yt_dlp
 
 from ffmpeg_check import check_ffmpeg_command, check_ffmpeg
@@ -290,6 +291,8 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
         make_dirs(f"{synced_dir}/")
 
+        unkown_files = 0
+
         for f in os.listdir(synced_dir):
 
             if not f.endswith(f".{ext}") or not os.path.isfile(f"{synced_dir}/{f}"):
@@ -301,9 +304,14 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
                 yt_id = None
 
             if not yt_id:
-                make_dirs(old_dir)
-                shutil.move(f"{synced_dir}/{f}", f"{old_dir}/{f}")
+                make_dirs(f"{out_dir}/.arquivos_desconhecidos")
+                shutil.move(f"{synced_dir}/{f}", f"{out_dir}/.arquivos_desconhecidos/{f}")
+                unkown_files += 1
                 continue
+
+        if unkown_files > 1:
+            print(f"{unkown_files} arquivo{(s := 's'[:unkown_files ^ 1])} fo{'ram'[:unkown_files ^ 1] or 'i'} "
+                  f"movido{s} pra pasta {out_dir}/.arquivos_desconhecidos")
 
         ytdl_args_list = []
 
@@ -314,6 +322,8 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
         total_entries = len(new_tracks)
 
         for yt_id, track in new_tracks.items():
+
+            track_ids.add(yt_id)
 
             if e_message := error_messages.get(track['name']):
                 total_entries -= 1
@@ -329,8 +339,6 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
                                        f"{old_dir}/{yt_id}.{ext}")
                     print(f"{e_message} (reaproveitado): https://www.youtube.com/watch?v={yt_id}")
                 continue
-
-            track_ids.add(yt_id)
 
             index += 1
 
@@ -372,12 +380,19 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
         pass
 
     if os.path.isdir(f"{out_dir}/.synced_playlist_data"):
+
+        removed_files = 0
+
         for f in os.listdir(f"{out_dir}/.synced_playlist_data/"):
             if not f.endswith((".mp3", ".mp4")):
                 continue
             if f[:-4] not in track_ids:
-                print(f[:-4])
-                shutil.move(f"{out_dir}/.synced_playlist_data/{f}", f"{old_dir}/{f}")
+                send2trash(f"{out_dir}/.synced_playlist_data/{f}")
+                removed_files += 1
+
+        if removed_files > 1:
+            print(f"{removed_files} arquivo{(s := 's'[:removed_files ^ 1])} que não estão em suas playlists "
+                  f"fo{'ram'[:removed_files ^ 1] or 'i'} deletados{s} para lixeira")
 
 
 def download_video(name: str, counter: int, yt_id: str, args, playlist_dir: str, out_dir: str, index: int, ext: str,
