@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -184,7 +185,8 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
                     {'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'},
                     {'key': 'FFmpegMetadata', 'add_metadata': 'True'},
                     {'key': 'EmbedThumbnail', 'already_have_thumbnail': False}
-                ]
+                ],
+                'parse_metadata': 'title:%(playlist_index)s - %(title)s',
             }
         )
     else:
@@ -204,37 +206,6 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
     make_dirs(old_dir)
 
     make_dirs(f"{out_dir}/.synced_playlist_data/")
-
-    # TODO: Remover esse trecho no dia 26/07
-    for fscan in (".synced_playlist_data_mp3", ".synced_playlist_data_mp4"):
-
-        if not os.path.isdir(f"{out_dir}/{fscan}"):
-            continue
-
-        for d in os.listdir(f"{out_dir}/{fscan}/"):
-            for raiz, _, arquivos in os.walk(f"{out_dir}/{fscan}/{d}"):
-                for arquivo in arquivos:
-                    if arquivo.endswith(('.mp3', '.mp4')):
-                        try:
-                            shutil.move(os.path.join(raiz, arquivo), f"{out_dir}/.synced_playlist_data/")
-                        except Exception as e:
-                            if not str(e).endswith("already exists"):
-                                raise e
-
-        shutil.rmtree(f"{out_dir}/{fscan}")
-
-    for od in os.listdir(old_dir):
-        if not os.path.isdir(f"{old_dir}/{od}"):
-            continue
-        for d in os.listdir(f"{old_dir}/{od}/"):
-            for raiz, _, arquivos in os.walk(f"{old_dir}/{od}/{d}"):
-                for arquivo in arquivos:
-                    if arquivo.endswith(('.mp3', '.mp4')):
-                        try:
-                            shutil.move(os.path.join(raiz, arquivo), old_dir)
-                        except Exception as e:
-                            if not str(e).endswith("already exists"):
-                                raise e
 
     for yt_pl_id in file_list:
 
@@ -288,7 +259,7 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
             } for c, t in enumerate(data["entries"]) if not t["live_status"] and not t["live_status"]
         }
 
-        synced_dir = f"{out_dir}/.synced_playlist_data"
+        synced_dir = f"{out_dir}/.synced_playlist_data/{playlist_id}"
 
         make_dirs(f"{synced_dir}/")
 
@@ -322,6 +293,13 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
         total_entries = len(new_tracks)
 
+        save_data = deepcopy(data)
+
+        del save_data["entries"]
+
+        with open(f"{synced_dir}/playlist_info.json", "w", encoding="utf-8") as f:
+            f.write(json.dumps(save_data, indent=4))
+
         for yt_id, track in new_tracks.items():
 
             track_ids.add(yt_id)
@@ -343,11 +321,15 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
             index += 1
 
-            if os.path.isfile(f"{synced_dir}/{yt_id}.{ext}"):
+            print(f"{out_dir}/{yt_id}.{ext}")
+
+            if (move:=os.path.isfile(f"{out_dir}/.synced_playlist_data/{yt_id}.{ext}")) or os.path.isfile(f"{synced_dir}/{yt_id}.{ext}"):
                 total_entries -= 1
                 existing += 1
                 m3u_data[index] = (f"#EXTINF:{track['duration']},{track['name']} - Por: {track['uploader']}\n"
-                                   f"./.synced_playlist_data/{yt_id}.{ext}")
+                                   f"./.synced_playlist_data/{playlist_id}/{yt_id}.{ext}")
+                if move:
+                    shutil.move(f"{out_dir}/.synced_playlist_data/{yt_id}.{ext}", f"{synced_dir}/{yt_id}.{ext}")
                 continue
 
             new_args = deepcopy(ytdl_download_args_final)
@@ -375,25 +357,25 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
         m3u_data.clear()
 
+        if os.path.isdir(f"{synced_dir}/{playlist_id}"):
+
+            removed_files = 0
+
+            for f in os.listdir(f"{synced_dir}/{playlist_id}/.synced_playlist_data/"):
+                if not f.endswith((".mp3", ".mp4")):
+                    continue
+                if f[:-4] not in track_ids:
+                    send2trash(os.path.abspath(f"{synced_dir}/{playlist_id}/.synced_playlist_data/{f}"))
+                    removed_files += 1
+
+            if removed_files > 1:
+                print(f"\n\n{removed_files} arquivo{(s := 's'[:removed_files ^ 1])} que não estão em suas playlists "
+                      f"fo{'ram'[:removed_files ^ 1] or 'i'} movido{s} para a lixeira")
+
     try:
         os.remove("cookies.temp")
     except FileNotFoundError:
         pass
-
-    if os.path.isdir(f"{out_dir}/.synced_playlist_data"):
-
-        removed_files = 0
-
-        for f in os.listdir(f"{out_dir}/.synced_playlist_data/"):
-            if not f.endswith((".mp3", ".mp4")):
-                continue
-            if f[:-4] not in track_ids:
-                send2trash(os.path.abspath(f"{out_dir}/.synced_playlist_data/{f}"))
-                removed_files += 1
-
-        if removed_files > 1:
-            print(f"\n\n{removed_files} arquivo{(s := 's'[:removed_files ^ 1])} que não estão em suas playlists "
-                  f"fo{'ram'[:removed_files ^ 1] or 'i'} movido{s} para a lixeira")
 
 
 def download_video(name: str, counter: int, yt_id: str, args, playlist_dir: str, out_dir: str, index: int, ext: str,
