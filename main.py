@@ -10,6 +10,7 @@ from tempfile import gettempdir
 
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
+from platformdirs import user_music_dir, user_videos_dir
 from send2trash import send2trash
 import yt_dlp
 
@@ -124,7 +125,7 @@ def run():
             if not os.path.isdir(os.path.abspath(playlists_audio_directory)):
                 raise Exception(f"O diretório não existe: {playlists_audio_directory}")
     except (IndexError, FileNotFoundError):
-        playlists_audio_directory = "./playlists_audio"
+        playlists_audio_directory = user_music_dir() or "./playlists_audio"
         with open("./playlists_audio_directory.txt", "w") as f:
             f.write(playlists_audio_directory)
 
@@ -143,7 +144,7 @@ def run():
             if not os.path.isdir(os.path.abspath(playist_video_directory)):
                 raise Exception(f"O diretório não existe: {playist_video_directory}")
     except (IndexError, FileNotFoundError):
-        playist_video_directory = "./playlists_video"
+        playist_video_directory = user_videos_dir() or "./playlists_video"
         with open("./playists_video_directory.txt", "w") as f:
             f.write(playist_video_directory)
 
