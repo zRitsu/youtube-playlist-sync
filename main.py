@@ -101,10 +101,10 @@ def run():
     try:
         shutil.copy("cookies.txt", "cookies.temp")
         cookie_file = "./cookies.temp"
-        print("Usando cookies.txt para obter videos de playlists privadas.")
+        print("\n\nUsando cookies.txt para obter videos de playlists privadas.")
     except FileNotFoundError:
         cookie_file = None
-        print("Uso de cookies.txt ignorado (caso tenha adicionado link de alguma playlist privada da sua conta no "
+        print("\n\nUso de cookies.txt ignorado (caso tenha adicionado link de alguma playlist privada da sua conta no "
               "arquivo playlists.txt ela será ignorada com erro de playlist inexistente).")
 
     if os.path.isfile("./playlists.txt"):
@@ -149,12 +149,12 @@ def run():
             f.write(playist_video_directory)
 
     if not playlists_audio and not playlists_video:
-        print("Abra o arquivo playlists_links_audio.txt e cole os links das suas playlists do youtube (pra download de "
+        print("\n\nAbra o arquivo playlists_links_audio.txt e cole os links das suas playlists do youtube (pra download de "
               "vídeos cole os links de playlists no playlists_links_video.txt).")
         return
 
     if os.path.isdir("./playlists"):
-        print(f"Movendo músicas da pasta playlists para a pasta {playlists_audio_directory}")
+        print(f"\n\nMovendo músicas da pasta playlists para a pasta {playlists_audio_directory}")
         move_dir("./playlists", playlists_audio_directory)
 
     download_playlist(file_list=playlists_audio, out_dir=playlists_audio_directory, only_audio=True,
@@ -242,7 +242,7 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
         if not data:
 
-            print(f"\nObtendo informações da playlist: https://www.youtube.com/playlist?list={yt_pl_id}")
+            print(f"\n\nObtendo informações da playlist: https://www.youtube.com/playlist?list={yt_pl_id}")
 
             with yt_dlp.YoutubeDL(
                     {
@@ -311,7 +311,7 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
                 continue
 
         if unkown_files > 1:
-            print(f"{unkown_files} arquivo{(s := 's'[:unkown_files ^ 1])} fo{'ram'[:unkown_files ^ 1] or 'i'} "
+            print(f"\n\n{unkown_files} arquivo{(s := 's'[:unkown_files ^ 1])} fo{'ram'[:unkown_files ^ 1] or 'i'} "
                   f"movido{s} pra pasta {out_dir}/.arquivos_desconhecidos")
 
         ytdl_args_list = []
@@ -331,14 +331,14 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
                 try:
                     deleted_file = [p for p in [f"{old_dir}/{yt_id}.{ext}", f"{synced_dir}/{yt_id}.{ext}"] if os.path.isfile(p)][0]
                 except IndexError:
-                    print(f"{e_message}: https://www.youtube.com/watch?v={yt_id}")
+                    print(f"\n\n{e_message}: https://www.youtube.com/watch?v={yt_id}")
                 else:
                     existing += 1
                     audio_tag = MP3(deleted_file, ID3=EasyID3)
                     m3u_data[index] = (f"#EXTINF:{int(audio_tag.info.length)},[{e_message}]: {audio_tag['title'][0]} - "
                                        f"Por: {audio_tag['artist'][0]}\n"
                                        f"{old_dir}/{yt_id}.{ext}")
-                    print(f"{e_message} (reaproveitado): https://www.youtube.com/watch?v={yt_id}")
+                    print(f"\n\n{e_message} (reaproveitado): https://www.youtube.com/watch?v={yt_id}")
                 continue
 
             index += 1
@@ -360,8 +360,8 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
         if existing > 0:
             save_m3u(f"{out_dir}/{sanitize_filename(playlist_name)} - {playlist_id}.m3u")
-            print(
-                f"{existing} download{'s'[:existing ^ 1]} de {media_txt}{'s'[:existing ^ 1]} existente{'s'[:existing ^ 1]} ignorado{'s'[:existing ^ 1]}.")
+            print(f"\n\n{existing} download{'s'[:existing ^ 1]} de {media_txt}{'s'[:existing ^ 1]} "
+                  f"existente{'s'[:existing ^ 1]} ignorado{'s'[:existing ^ 1]}.")
 
         if not ytdl_args_list:
             time.sleep(10)
@@ -392,8 +392,8 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
                 removed_files += 1
 
         if removed_files > 1:
-            print(f"{removed_files} arquivo{(s := 's'[:removed_files ^ 1])} que não estão em suas playlists "
-                  f"fo{'ram'[:removed_files ^ 1] or 'i'} deletados{s} para lixeira")
+            print(f"\n\n{removed_files} arquivo{(s := 's'[:removed_files ^ 1])} que não estão em suas playlists "
+                  f"fo{'ram'[:removed_files ^ 1] or 'i'} movido{s} para a lixeira")
 
 
 def download_video(name: str, counter: int, yt_id: str, args, playlist_dir: str, out_dir: str, index: int, ext: str,
