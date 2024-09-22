@@ -388,7 +388,7 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
             if not f.endswith((".mp3", ".mp4")):
                 continue
             if f[:-4] not in track_ids:
-                send2trash(f"{out_dir}/.synced_playlist_data/{f}")
+                send2trash(os.path.abspath(f"{out_dir}/.synced_playlist_data/{f}"))
                 removed_files += 1
 
         if removed_files > 1:
