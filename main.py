@@ -9,8 +9,10 @@ import concurrent.futures
 from copy import deepcopy
 from tempfile import gettempdir
 
+import mutagen.mp3
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
+from mutagen.mp4 import MP4
 from platformdirs import user_music_dir, user_videos_dir
 from send2trash import send2trash
 import yt_dlp
@@ -321,7 +323,7 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
                     m3u_data[index] = (f"#EXTINF:{int(audio_tag.info.length)},[{e_message}]: {audio_tag['title'][0]} - "
                                        f"Por: {audio_tag['artist'][0]}\n"
                                        f"{old_dir}/{yt_id}.{ext}")
-                    audio_tag["tracknumber"] = f"{index}/{total_entries_original}"
+                    audio_tag["tracknumber"] = f"{track_counter}/{total_entries_original}"
                     audio_tag.save()
                     print(f"{e_message} (reaproveitado): https://www.youtube.com/watch?v={yt_id}")
                 continue
@@ -337,9 +339,13 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
                 if move:
                     shutil.move(f"{out_dir}/.synced_playlist_data/{yt_id}.{ext}", f"{synced_dir}/{yt_id}.{ext}")
 
-                audio_tag = MP3(f"{synced_dir}/{yt_id}.{ext}", ID3=EasyID3)
-                audio_tag["tracknumber"] = f"{index}/{total_entries_original}"
-                audio_tag.save()
+                try:
+                    func = MP3 if only_audio else MP4
+                    audio_tag = func(f"{synced_dir}/{yt_id}.{ext}", ID3=EasyID3)
+                    audio_tag["tracknumber"] = f"{track_counter}/{total_entries_original}"
+                    audio_tag.save()
+                except mutagen.mp3.HeaderNotFoundError:
+                    print(f"Erro ao salvar tag: {track['name']} - {ext}")
                 continue
 
             new_args = deepcopy(ytdl_download_args_final)
@@ -348,7 +354,7 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
             ytdl_args_list.append(
                 [new_tracks[yt_id]["name"], download_counter, yt_id, new_args, synced_dir, out_dir, index, ext, playlist_name,
-                 playlist_id, total_entries_original])
+                 playlist_id, total_entries_original, track_counter])
 
         if existing > 0:
             save_m3u(f"{out_dir}/{sanitize_filename(playlist_name)} - {playlist_id}.m3u")
@@ -389,7 +395,7 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
 
 def download_video(name: str, counter: int, yt_id: str, args, playlist_dir: str, out_dir: str, index: int, ext: str,
-                   playlist_name: str, playlist_id: str, total_entries: int, total_entries_original):
+                   playlist_name: str, playlist_id: str, total_entries_original, track_counter, total_entries: int):
     logging.info(f"\n[{counter}/{total_entries}] Baixando: [{yt_id}] -> {name}")
 
     filepath = None
@@ -409,7 +415,7 @@ def download_video(name: str, counter: int, yt_id: str, args, playlist_dir: str,
         try:
 
             audio_tag = MP3(filepath, ID3=EasyID3)
-            audio_tag["tracknumber"] = f"{index}/{total_entries_original}"
+            audio_tag["tracknumber"] = f"{track_counter}/{total_entries_original}"
             audio_tag.save()
 
             shutil.move(filepath, f"{playlist_dir}/{os.path.basename(filepath)}")
