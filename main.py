@@ -331,14 +331,14 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
                 try:
                     deleted_file = [p for p in [f"{old_dir}/{yt_id}.{ext}", f"{synced_dir}/{yt_id}.{ext}"] if os.path.isfile(p)][0]
                 except IndexError:
-                    print(f"\n\n{e_message}: https://www.youtube.com/watch?v={yt_id}")
+                    print(f"{e_message}: https://www.youtube.com/watch?v={yt_id}")
                 else:
                     existing += 1
                     audio_tag = MP3(deleted_file, ID3=EasyID3)
                     m3u_data[index] = (f"#EXTINF:{int(audio_tag.info.length)},[{e_message}]: {audio_tag['title'][0]} - "
                                        f"Por: {audio_tag['artist'][0]}\n"
                                        f"{old_dir}/{yt_id}.{ext}")
-                    print(f"\n\n{e_message} (reaproveitado): https://www.youtube.com/watch?v={yt_id}")
+                    print(f"{e_message} (reaproveitado): https://www.youtube.com/watch?v={yt_id}")
                 continue
 
             index += 1
@@ -360,7 +360,7 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
 
         if existing > 0:
             save_m3u(f"{out_dir}/{sanitize_filename(playlist_name)} - {playlist_id}.m3u")
-            print(f"\n\n{existing} download{'s'[:existing ^ 1]} de {media_txt}{'s'[:existing ^ 1]} "
+            print(f"{existing} download{'s'[:existing ^ 1]} de {media_txt}{'s'[:existing ^ 1]} "
                   f"existente{'s'[:existing ^ 1]} ignorado{'s'[:existing ^ 1]}.")
 
         if not ytdl_args_list:
