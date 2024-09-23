@@ -393,6 +393,8 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
                 print(f"\n\n{removed_files} arquivo{(s := 's'[:removed_files ^ 1])} que não estão em suas playlists "
                       f"fo{'ram'[:removed_files ^ 1] or 'i'} movido{s} para a lixeira")
 
+        print(f"\n\nA playlist \"{playlist_name} - {playlist_id}.m3u\" foi salva no diretório: {os.path.abspath(out_dir)}")
+
     try:
         os.remove("cookies.temp")
     except FileNotFoundError:
