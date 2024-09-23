@@ -16,3 +16,7 @@
 * Teste de reprodução da playlist m3u no Daum Potplayer com miniatura ativada na lista (pode ser ativado via preferências -> Reprodução > Lista de reprodução e na opção "lista" escolha uma que tenha miniaturas). Nota: alguns outros players como o VLC também tem suporte a thumb.
 
 [![dPmN641.md.png](https://iili.io/dPmN641.md.png)](https://freeimage.host/i/dPmN641)
+
+* Suporte a Rich-Presence do Discord (executando o start_rpc_windows).
+
+[![dszwI5J.md.png](https://iili.io/dszwI5J.md.png)](https://freeimage.host/i/dszwI5J) [![dszOxwv.md.png](https://iili.io/dszOxwv.md.png)](https://freeimage.host/i/dszOxwv)
