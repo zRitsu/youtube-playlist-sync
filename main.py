@@ -410,7 +410,7 @@ def download_video(name: str, counter: int, yt_id: str, args, playlist_dir: str,
             r = ytdl.extract_info(url=f"https://www.youtube.com/watch?v={yt_id}")
             filepath = r['requested_downloads'][0]['filepath']
             m3u_data[index] = (f"#EXTINF:{r['duration']},{r['title']} - Por: {r['uploader']}\n"
-                               f"./.synced_playlist_data/{yt_id}.{ext}")
+                               f"./.synced_playlist_data/{playlist_id}/{yt_id}.{ext}")
     except Exception as e:
         logging.info(f"Erro ao baixar: [{yt_id}] -> {name} | {repr(e)}")
 
