@@ -1,4 +1,7 @@
+psutil
 yt-dlp
 mutagen
 send2trash
 platformdirs
+emoji
+https://github.com/zRitsu/discoIPC/archive/refs/heads/master.zip
