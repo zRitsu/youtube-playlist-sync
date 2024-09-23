@@ -22,11 +22,11 @@ yt_video_regex = re.compile(r'(?:^|(?<=\W))[-a-zA-Z0-9_]{11}(?:$|(?=\W))')
 
 players = {
     "potplayermini64.exe": {
-        "name": "Daum PotPlayer (x64)",
+        "name": "PotPlayer (x64)",
         "icon": "https://upload.wikimedia.org/wikipedia/commons/e/e0/PotPlayer_logo_%282017%29.png"
     },
     "potplayermini.exe": {
-        "name": "Daum PotPlayer",
+        "name": "PotPlayer",
         "icon": "https://upload.wikimedia.org/wikipedia/commons/e/e0/PotPlayer_logo_%282017%29.png"
     },
     "mpc-hc64.exe": {
@@ -148,7 +148,7 @@ class RpcRun:
         self.rpc_client = None
         self.player_name = None
         self.player_icon = None
-        self.current_file = None
+        self.current_file = ""
         self.activity_type = ActivityType.listening.value
         self.start_loop()
 
@@ -171,22 +171,12 @@ class RpcRun:
 
             try:
                 if not self.process or not self.process.is_running():
-                    p = self.get_process()
-                    if self.process is None:
+                    if (p:=self.get_process()) is None:
                         self.clear_info()
                         continue
-                    if p:
-                        time.sleep(15)
-                        continue
 
-                p = self.check_process(self.process)
-
-                if p is None:
+                elif (p:=self.check_process(self.process)) is None:
                     self.clear_info()
-                    continue
-
-                if p:
-                    time.sleep(15)
                     continue
 
                 if not self.rpc_client:
@@ -209,6 +199,10 @@ class RpcRun:
                     except KeyError:
                         self.rpc_client = None
                         continue
+
+                if p == self.current_file:
+                    time.sleep(15)
+                    continue
 
                 # Contagem de caracteres do botão consomem o dobro do limite de um caracter normal
                 playlist_limit = 25 if emoji.emoji_count(self.playlist_name) < 1 else 18
@@ -252,6 +246,7 @@ class RpcRun:
 
                 try:
                     self.rpc_client.update_activity(payload)
+                    self.current_file = p
                 except Exception:
                     traceback.print_exc()
                     self.rpc_client = None
@@ -276,11 +271,11 @@ class RpcRun:
                         playlist_info = json.load(f)
                 except FileNotFoundError:
                     continue
-                self.current_file = o.path
+
                 self.playlist_name = playlist_info["title"]
                 self.playlist_id = playlist_info["id"]
 
-                if o.path.endswith(".*mp3"):
+                if o.path.endswith(".mp3"):
                     func = MP3
                     kw = {"ID3": EasyID3}
                 else:
@@ -303,7 +298,7 @@ class RpcRun:
 
                 self.player_name = player_info["name"]
                 self.player_icon = player_info["icon"]
-                return True
+                return o.path
 
     def get_process(self):
 
