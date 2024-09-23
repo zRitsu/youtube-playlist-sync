@@ -340,8 +340,13 @@ def download_playlist(file_list: list, out_dir: str, only_audio=True, **kwargs):
                     shutil.move(f"{out_dir}/.synced_playlist_data/{yt_id}.{ext}", f"{synced_dir}/{yt_id}.{ext}")
 
                 try:
-                    func = MP3 if only_audio else MP4
-                    audio_tag = func(f"{synced_dir}/{yt_id}.{ext}", ID3=EasyID3)
+                    if only_audio:
+                        func = MP3
+                        tag_kw = {"ID3": EasyID3}
+                    else:
+                        func = MP4
+                        tag_kw = {}
+                    audio_tag = func(f"{synced_dir}/{yt_id}.{ext}", **tag_kw)
                     audio_tag["tracknumber"] = f"{track_counter}/{total_entries_original}"
                     audio_tag.save()
                 except mutagen.mp3.HeaderNotFoundError:
