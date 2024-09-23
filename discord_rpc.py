@@ -106,19 +106,6 @@ class MyDiscordIPC(DiscordIPC):
         except Exception as e:
             raise IPCError(f'Não foi possivel enviar dados ao discord via IPC | Erro: {repr(e)}.', client=self)
 
-    def update_activity(self, activity=None):
-
-        if activity:
-            self.last_data = activity
-        else:
-            self.last_data.clear()
-
-        try:
-            super().update_activity(activity=activity)
-        except Exception as e:
-            self.last_data.clear()
-            raise e
-
     def _get_ipc_path(self, id=0):
         # credits: pypresence https://github.com/qwertyquerty/pypresence/blob/31718fb442e563f879160c16e0215c7c1fa16f23/pypresence/utils.py#L25
         ipc = f"discord-ipc-{id}"
@@ -161,6 +148,7 @@ class RpcRun:
         self.rpc_client = None
         self.player_name = None
         self.player_icon = None
+        self.current_file = None
         self.activity_type = ActivityType.listening.value
         self.start_loop()
 
@@ -170,6 +158,7 @@ class RpcRun:
         self.author = None
         self.track_name = None
         self.video_id = None
+        self.current_file = None
         try:
             self.rpc_client.clear()
         except AttributeError:
@@ -182,13 +171,22 @@ class RpcRun:
 
             try:
                 if not self.process or not self.process.is_running():
-                    self.get_process()
-                    if not self.process:
+                    p = self.get_process()
+                    if self.process is None:
                         self.clear_info()
                         continue
+                    if p:
+                        time.sleep(15)
+                        continue
 
-                elif not self.check_process(self.process):
+                p = self.check_process(self.process)
+
+                if p is None:
                     self.clear_info()
+                    continue
+
+                if p:
+                    time.sleep(15)
                     continue
 
                 if not self.rpc_client:
@@ -269,12 +267,16 @@ class RpcRun:
 
         for o in proc.open_files():
 
+            if self.current_file == o.path:
+                return o.path
+
             if o.path.endswith((".mp3", ".mp4")) and (yt_id := yt_video_regex.search(o.path)):
                 try:
                     with open(f"{os.path.dirname(o.path)}/playlist_info.json") as f:
                         playlist_info = json.load(f)
                 except FileNotFoundError:
                     continue
+                self.current_file = o.path
                 self.playlist_name = playlist_info["title"]
                 self.playlist_id = playlist_info["id"]
 
