@@ -17,6 +17,6 @@
 
 [![dPmN641.md.png](https://iili.io/dPmN641.md.png)](https://freeimage.host/i/dPmN641)
 
-* Suporte a Rich-Presence do Discord (executando o start_rpc_windows). Players suportados até o momento: [Daum PotPlayer](https://potplayer.daum.net), [VLC](https://www.videolan.org/vlc), [Media Player Classic](https://mpc-hc.org), [foobar2000](https://www.foobar2000.org/), [AIMP](https://www.aimp.ru), [MusicBee](https://www.getmusicbee.com), [Media Monkey](https://www.mediamonkey.com) e [KMPlayer](https://www.kmplayer.com/home)
+* Suporte a Rich-Presence do Discord (executando o start_rpc_windows). Players suportados até o momento: [Daum PotPlayer](https://potplayer.daum.net), [VLC](https://www.videolan.org/vlc), [Media Player Classic](https://mpc-hc.org), [Winamp](https://winamp.com), [foobar2000](https://www.foobar2000.org/), [AIMP](https://www.aimp.ru), [MusicBee](https://www.getmusicbee.com), [Media Monkey](https://www.mediamonkey.com) e [KMPlayer](https://www.kmplayer.com/home)
 
 [![dszwI5J.md.png](https://iili.io/dszwI5J.md.png)](https://freeimage.host/i/dszwI5J) [![dszOxwv.md.png](https://iili.io/dszOxwv.md.png)](https://freeimage.host/i/dszOxwv)
