@@ -278,9 +278,14 @@ class RpcRun:
                 self.playlist_name = playlist_info["title"]
                 self.playlist_id = playlist_info["id"]
 
-                func = MP3 if o.path.endswith(".mp3") else MP4
+                if o.path.endswith(".*mp3"):
+                    func = MP3
+                    kw = {"ID3": EasyID3}
+                else:
+                    func = MP4
+                    kw = {}
 
-                tags = func(o.path, ID3=EasyID3)
+                tags = func(o.path, **kw)
                 self.track_name = tags["title"][0]
                 self.author = tags["artist"][0]
 
