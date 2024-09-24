@@ -4,4 +4,8 @@ mutagen
 send2trash
 platformdirs
 emoji
+aiofiles
+aiohttp
+cachetools
+python-dotenv
 https://github.com/zRitsu/discoIPC/archive/refs/heads/master.zip

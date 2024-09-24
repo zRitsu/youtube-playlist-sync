@@ -1,83 +1,87 @@
+import asyncio
 import enum
 import json
 import os
 import re
 import sys
 import tempfile
-import time
 import traceback
 from typing import Optional
 
+import aiofiles
 import emoji
 import psutil
 from discoIPC.ipc import DiscordIPC
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
+from rapidfuzz import fuzz
+
+from lastfm import LastFM
+from spotify import SpotifyClient
 
 yt_playlist_regex = re.compile(r'(?<=list=)[a-zA-Z0-9_-]+')
 
 yt_video_regex = re.compile(r'(?:^|(?<=\W))[-a-zA-Z0-9_]{11}(?:$|(?=\W))')
 
-
 players = {
-    "potplayermini64.exe": {
-        "name": "PotPlayer (x64)",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/e/e0/PotPlayer_logo_%282017%29.png"
-    },
-    "potplayermini.exe": {
-        "name": "PotPlayer",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/e/e0/PotPlayer_logo_%282017%29.png"
-    },
-    "mpc-hc64.exe": {
-        "name": "Media Player Classic HC-x64",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/7/76/Media_Player_Classic_logo.png"
-    },
-    "mpc-hc.exe": {
-        "name": "Media Player Classic HC",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/7/76/Media_Player_Classic_logo.png"
-    },
-    "foobar2000.exe": {
-        "name":"foobar2000",
-        "icon": "https://i.sstatic.net/JowsQ.jpg"
-    },
-    "vlc.exe": {
-        "name": "VLC Player",
-        "icon": "https://cdn1.iconfinder.com/data/icons/metro-ui-dock-icon-set--icons-by-dakirby/512/VLC_Media_Player.png"
-    },
-    "winamp.exe": {
-        "name": "Winamp",
-        "icon": "https://iili.io/dsKTaUB.md.png"
-    },
-    "aimp.exe": {
-        "name": "AIMP",
-        "icon": "https://iili.io/dsKpuSV.md.png"
-    },
-    "musicbee.exe": {
-        "name": "MusicBee",
-        "icon": "https://iili.io/dsf9KQe.png"
-    },
-    "mediamonkeyengine.exe": {
-        "name": "Media Monkey",
-        "icon": "https://iili.io/dsfaPs9.png",
-    },
-    "kmplayer.exe": {
-        "name": "KM Player",
-        "icon": "https://cdn6.aptoide.com/imgs/b/4/8/b48d248dc9514b23279b87e3e3c70c7d_icon.png?w=512",
-    },
+            "potplayermini64.exe": {
+                "name": "PotPlayer (x64)",
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/e/e0/PotPlayer_logo_%282017%29.png"
+            },
+            "potplayermini.exe": {
+                "name": "PotPlayer",
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/e/e0/PotPlayer_logo_%282017%29.png"
+            },
+            "mpc-hc64.exe": {
+                "name": "Media Player Classic HC-x64",
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/7/76/Media_Player_Classic_logo.png"
+            },
+            "mpc-hc.exe": {
+                "name": "Media Player Classic HC",
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/7/76/Media_Player_Classic_logo.png"
+            },
+            "foobar2000.exe": {
+                "name": "foobar2000",
+                "icon": "https://i.sstatic.net/JowsQ.jpg"
+            },
+            "vlc.exe": {
+                "name": "VLC Player",
+                "icon": "https://cdn1.iconfinder.com/data/icons/metro-ui-dock-icon-set--icons-by-dakirby/512/VLC_Media_Player.png"
+            },
+            "winamp.exe": {
+                "name": "Winamp",
+                "icon": "https://iili.io/dsKTaUB.md.png"
+            },
+            "aimp.exe": {
+                "name": "AIMP",
+                "icon": "https://iili.io/dsKpuSV.md.png"
+            },
+            "musicbee.exe": {
+                "name": "MusicBee",
+                "icon": "https://iili.io/dsf9KQe.png"
+            },
+            "mediamonkeyengine.exe": {
+                "name": "Media Monkey",
+                "icon": "https://iili.io/dsfaPs9.png",
+            },
+            "kmplayer.exe": {
+                "name": "KM Player",
+                "icon": "https://cdn6.aptoide.com/imgs/b/4/8/b48d248dc9514b23279b87e3e3c70c7d_icon.png?w=512",
+            },
 
-    # os players do windows tem um problema que ocasionalmente fica lendo todos os arquivos de música
-    # do pc o que faz com que as informações de arquivos de músicas em uso pelo processo confunda a música ativa no momento.
+            # os players do windows tem um problema que ocasionalmente fica lendo todos os arquivos de música
+            # do pc o que faz com que as informações de arquivos de músicas em uso pelo processo confunda a música ativa no momento.
 
-    #"wmplayer.exe": {
-    #    "name": "Windows Media Player (Legacy)",
-    #    "icon": "https://iili.io/dsfd18x.png"
-    #},
-    #"microsoft.media.player.exe": {
-    #    "name": "Microsoft Media Player",
-    #    "icon": "https://iili.io/dsfqJvs.md.png"
-    #}
-}
+            # "wmplayer.exe": {
+            #    "name": "Windows Media Player (Legacy)",
+            #    "icon": "https://iili.io/dsfd18x.png"
+            # },
+            # "microsoft.media.player.exe": {
+            #    "name": "Microsoft Media Player",
+            #    "icon": "https://iili.io/dsfqJvs.md.png"
+            # }
+        }
 
 class ActivityType(enum.Enum):
     playing = 0
@@ -145,14 +149,27 @@ class RpcRun:
         self.track_name: Optional[str] = None
         self.track_number: Optional[str] = None
         self.video_id: Optional[str] = None
+        self.track_duration: Optional[int] = None
         self.rpc_client = None
         self.player_name = None
         self.player_icon = None
         self.current_file = ""
+        self.user_id = None
+        self.username = None
+        self.spotify = SpotifyClient()
         self.activity_type = ActivityType.listening.value
-        self.start_loop()
+        self.scrobble_task: Optional[asyncio.Task] = None
+        self.loop = None
 
-    def clear_info(self):
+        self.last_fm = None
+
+        if (lastfm_key:=os.getenv("LASTFM_KEY")) and (lastfm_secret:=os.getenv("LASTFM_SECRET")):
+            self.last_fm = LastFM(lastfm_key, lastfm_secret)
+        else:
+            print("Sistema de scrobble via last.fm desativado.")
+
+
+    async def clear_info(self):
         self.playlist_id = None
         self.playlist_name = None
         self.author = None
@@ -163,20 +180,79 @@ class RpcRun:
             self.rpc_client.clear()
         except AttributeError:
             pass
-        time.sleep(15)
+        await asyncio.sleep(15)
 
-    def start_loop(self):
+    async def start_scrobble(self, query, duration: int):
+
+        if not self.last_fm or not self.user_id:
+            return
+
+        async with aiofiles.open("../.lastfm_keys.json") as f:
+            users = json.loads(await f.read())
+
+        if not (fmdata:=users.get(self.user_id)):
+            return
+
+        print(f"Iniciando scrobble: {query}")
+
+        await asyncio.sleep(int(duration/3))
+
+        if (data:=self.last_fm.cache.get(query)) is None:
+
+            try:
+                result = await self.spotify.track_search(query)
+            except Exception:
+                traceback.print_exc()
+            else:
+
+                tags = ("mix", "remix", "extended")
+
+                if result:
+
+                    for t in result["tracks"]["items"]:
+
+                        if any(t for t in tags if t in query) and not any(g for g in tags if g in t["name"].lower()):
+                            continue
+
+                        string_check = t["name"].lower() + " - " + ", ".join(a["name"].lower() for a in t["artists"] if a["name"].lower() not in t["name"].lower())
+
+                        if fuzz.token_sort_ratio(string_check, query) > 70:
+
+                            data = {
+                                "name": t["name"],
+                                "artist": t["artists"][0]["name"],
+                                "album": t["album"]["name"],
+                                "duration": t["duration_ms"] / 1000
+                            }
+
+                            self.last_fm.cache[query] = data
+
+                            break
+
+        if not data:
+            self.last_fm.cache[query] = {}
+            print(f"Scrobble ignorado: {query}")
+            return
+
+        await self.last_fm.track_scrobble(
+            artist=data["artist"], track=data["name"], album=data["album"], duration=data["duration"],
+            session_key=fmdata["key"]
+        )
+
+        print(f"Scroble efetuado com sucesso: {query}")
+
+    async def start_loop(self):
 
         while True:
 
             try:
                 if not self.process or not self.process.is_running():
-                    if (p:=self.get_process()) is None:
-                        self.clear_info()
+                    if (p:=self.get_process(file_result=True)) is None:
+                        await self.clear_info()
                         continue
 
                 elif (p:=self.check_process(self.process)) is None:
-                    self.clear_info()
+                    await self.clear_info()
                     continue
 
                 if not self.rpc_client:
@@ -190,18 +266,19 @@ class RpcRun:
                             continue
 
                     if not self.rpc_client:
-                        time.sleep(15)
+                        await asyncio.sleep(15)
                         continue
 
                     try:
-                        print(f'Usuário conectado: {self.rpc_client.data["data"]["user"]["username"]} '
-                              f'[{self.rpc_client.data["data"]["user"]["id"]}]')
+                        self.username = self.rpc_client.data["data"]["user"]["username"]
+                        self.user_id = self.rpc_client.data["data"]["user"]["id"]
+                        print(f'Usuário conectado: {self.username} [{self.user_id}]')
                     except KeyError:
                         self.rpc_client = None
                         continue
 
                 if p == self.current_file:
-                    time.sleep(15)
+                    await asyncio.sleep(15)
                     continue
 
                 # Contagem de caracteres do botão consomem o dobro do limite de um caracter normal
@@ -247,16 +324,33 @@ class RpcRun:
                 try:
                     self.rpc_client.update_activity(payload)
                     self.current_file = p
+                    try:
+                        self.scrobble_task.cancel()
+                    except:
+                        pass
+                    if self.author.endswith(" - topic") and not self.author.endswith(
+                            "Release - topic") and not self.track_name.startswith(self.author[:-8]):
+                        query = f"{self.author} - {self.track_name}"
+                    else:
+                        query = self.track_name.lower() if len(self.track_name) > 12 else (
+                            f"{self.author} - {self.track_name}".lower())
+
+                    if not self.loop:
+                        self.loop = asyncio.get_event_loop()
+
+                    self.scrobble_task = self.loop.create_task(
+                        self.start_scrobble(query=query, duration=self.track_duration)
+                    )
                 except Exception:
                     traceback.print_exc()
                     self.rpc_client = None
-                    time.sleep(30)
+                    await asyncio.sleep(30)
 
             except Exception:
                 traceback.print_exc()
-                time.sleep(60)
+                await asyncio.sleep(60)
             else:
-                time.sleep(15)
+                await asyncio.sleep(15)
 
     def check_process(self, proc: psutil.Process):
 
@@ -285,6 +379,7 @@ class RpcRun:
                 tags = func(o.path, **kw)
                 self.track_name = tags["title"][0]
                 self.author = tags["artist"][0]
+                self.track_duration = tags.info.length
 
                 try:
                     self.track_number = tags.get("tracknumber")[0]
@@ -300,17 +395,21 @@ class RpcRun:
                 self.player_icon = player_info["icon"]
                 return o.path
 
-    def get_process(self):
+    def get_process(self, file_result=False):
 
         for proc in psutil.process_iter(['pid', 'name']):
 
             if [p for p in players if p.lower() in (proc.name()).lower()]:
 
-                if not self.check_process(proc):
+                if not (f:=self.check_process(proc)):
                     continue
 
-                return proc
+                return f if file_result else proc
 
-        self.process = None
+        self.process = None, None
 
-RpcRun()
+
+if __name__ == '__main__':
+    from dotenv import load_dotenv
+    load_dotenv()
+    asyncio.run(RpcRun().start_loop())

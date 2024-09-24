@@ -17,15 +17,13 @@ from platformdirs import user_music_dir, user_videos_dir
 from send2trash import send2trash
 import yt_dlp
 
-from ffmpeg_check import check_ffmpeg_command, check_ffmpeg
+from utils.ffmpeg_check import check_ffmpeg_command, check_ffmpeg
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 yt_playlist_regex = re.compile(r'(?<=list=)[a-zA-Z0-9_-]+')
 
 yt_video_regex = re.compile(r'(?:^|(?<=\W))[-a-zA-Z0-9_]{11}(?:$|(?=\W))')
-
-temp_dir = gettempdir()
 
 ytdl_download_args = {
     'ignoreerrors': False,
@@ -34,7 +32,7 @@ ytdl_download_args = {
     'quiet': True,
     'retries': 30,
     'extract_flat': False,
-    'outtmpl': f'{temp_dir}/%(id)s.%(ext)s',
+    'outtmpl': f'{gettempdir()}/%(id)s.%(ext)s',
     'extractor_args': {
         'youtube': {
             'skip': [
