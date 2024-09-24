@@ -260,11 +260,14 @@ class RpcRun:
                     await self.clear_info()
                     continue
 
+                if not self.loop:
+                    self.loop = asyncio.get_event_loop()
+
                 if not self.rpc_client:
                     for i in range(10):
                         try:
                             rpc = MyDiscordIPC("1287237467400962109", pipe=i)
-                            rpc.connect()
+                            await self.loop.run_in_executor(None, lambda: rpc.connect())
                             self.rpc_client = rpc
                             break
                         except Exception:
@@ -339,9 +342,6 @@ class RpcRun:
                     else:
                         query = self.track_name.lower() if len(self.track_name) > 12 else (
                             f"{self.author} - {self.track_name}".lower())
-
-                    if not self.loop:
-                        self.loop = asyncio.get_event_loop()
 
                     self.scrobble_task = self.loop.create_task(
                         self.start_scrobble(query=query, duration=self.track_duration)
