@@ -18,5 +18,5 @@ if not exist venv (
     cls
 )
 
-python utils\lastfm.py
+python lastfm.py
 pause

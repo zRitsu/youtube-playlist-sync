@@ -3,7 +3,6 @@ import hashlib
 import json
 import os
 import pickle
-import pprint
 import time
 import webbrowser
 
@@ -195,7 +194,7 @@ class LastFM:
             username = resp["session"]["name"]
 
             try:
-                with open("../.lastfm_keys.json", encoding="utf-8") as f:
+                with open(".lastfm_keys.json", encoding="utf-8") as f:
                     data = json.load(f)
             except FileNotFoundError:
                 data = {}

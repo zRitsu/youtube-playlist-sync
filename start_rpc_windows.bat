@@ -18,5 +18,5 @@ if not exist venv (
     cls
 )
 
-python utils\discord_rpc.py
+python discord_rpc.py
 pause

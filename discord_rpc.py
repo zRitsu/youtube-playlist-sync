@@ -19,9 +19,9 @@ from mutagen.mp4 import MP4
 from rapidfuzz import fuzz
 
 from lastfm import LastFM
-from spotify import SpotifyClient
+from utils.spotify import SpotifyClient
 
-yt_playlist_regex = re.compile(r'(?<=list=)[a-zA-Z0-9_-]+')
+yt_playlist_regex = re.compile(r'(?:list=)?([a-zA-Z0-9_-]+)')
 
 yt_video_regex = re.compile(r'(?:^|(?<=\W))[-a-zA-Z0-9_]{11}(?:$|(?=\W))')
 
@@ -169,6 +169,13 @@ class RpcRun:
         else:
             print("Sistema de scrobble via last.fm desativado.")
 
+        try:
+            with open("./lastfm_ignore_playlists.txt") as f:
+                self.ignore_playlists = set([p for p in yt_playlist_regex.findall(f.read())])
+        except FileNotFoundError:
+            traceback.print_exc()
+            self.ignore_playlists = set()
+
 
     async def clear_info(self):
         self.playlist_id = None
@@ -189,10 +196,10 @@ class RpcRun:
             return
 
         try:
-            async with aiofiles.open("./.lastfm_keys.json") as f:
+            async with aiofiles.open("./.lastfm_keys.json", encoding='utf-8') as f:
                 users = json.loads(await f.read())
         except FileNotFoundError:
-            users = None
+            users = {}
 
         if not (fmdata:=users.get(self.user_id)):
             print("Scrobble ignorado devido ao usuário não ter autenticado uma conta no last.fm (use o start_lastfm_auth pra isso).")
@@ -279,7 +286,7 @@ class RpcRun:
 
                     try:
                         self.username = self.rpc_client.data["data"]["user"]["username"]
-                        self.user_id = self.rpc_client.data["data"]["user"]["id"]
+                        self.user_id = str(self.rpc_client.data["data"]["user"]["id"])
                         print(f'Usuário conectado: {self.username} [{self.user_id}]')
                     except KeyError:
                         self.rpc_client = None
@@ -332,20 +339,24 @@ class RpcRun:
                 try:
                     self.rpc_client.update_activity(payload)
                     self.current_file = p
-                    try:
-                        self.scrobble_task.cancel()
-                    except:
-                        pass
-                    if self.author.endswith(" - topic") and not self.author.endswith(
-                            "Release - topic") and not self.track_name.startswith(self.author[:-8]):
-                        query = f"{self.author} - {self.track_name}"
-                    else:
-                        query = self.track_name.lower() if len(self.track_name) > 12 else (
-                            f"{self.author} - {self.track_name}".lower())
 
-                    self.scrobble_task = self.loop.create_task(
-                        self.start_scrobble(query=query, duration=self.track_duration)
-                    )
+                    if self.playlist_id in self.ignore_playlists:
+                        print(f"Scrobble ignorado: {self.track_name} - {self.author} [playlist: https://www.youtube.com&list={self.playlist_id}]")
+                    else:
+                        try:
+                            self.scrobble_task.cancel()
+                        except:
+                            pass
+                        if self.author.endswith(" - topic") and not self.author.endswith(
+                                "Release - topic") and not self.track_name.startswith(self.author[:-8]):
+                            query = f"{self.author} - {self.track_name}"
+                        else:
+                            query = self.track_name.lower() if len(self.track_name) > 12 else (
+                                f"{self.author} - {self.track_name}".lower())
+
+                        self.scrobble_task = self.loop.create_task(
+                            self.start_scrobble(query=query, duration=self.track_duration)
+                        )
                 except Exception:
                     traceback.print_exc()
                     self.rpc_client = None
