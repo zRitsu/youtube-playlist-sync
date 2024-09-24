@@ -110,7 +110,7 @@ class SpotifyClient:
 
                     self.type = "api"
 
-                    self.spotify_cache["tyoe"] = "api"
+                    self.spotify_cache["type"] = "api"
 
                     self.spotify_cache["expires_at"] = time.time() + self.spotify_cache["expires_in"]
 
@@ -126,6 +126,6 @@ class SpotifyClient:
             await f.write(json.dumps(self.spotify_cache))
 
     async def get_valid_access_token(self):
-        if time.time() >= self.spotify_cache["expires_at"]:
+        if not (exp_date := self.spotify_cache.get("expires_at")) or time.time() >= exp_date:
             await self.get_access_token()
         return self.spotify_cache["access_token"]
