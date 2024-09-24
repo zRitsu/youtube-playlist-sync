@@ -406,7 +406,7 @@ class RpcRun:
 
                 return f if file_result else proc
 
-        self.process = None, None
+        self.process = None
 
 
 if __name__ == '__main__':
