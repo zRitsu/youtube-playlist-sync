@@ -9,4 +9,5 @@ aiohttp
 cachetools
 python-dotenv
 moviepy
+rapidfuzz
 https://github.com/zRitsu/discoIPC/archive/refs/heads/master.zip
