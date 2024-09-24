@@ -8,4 +8,5 @@ aiofiles
 aiohttp
 cachetools
 python-dotenv
+moviepy
 https://github.com/zRitsu/discoIPC/archive/refs/heads/master.zip

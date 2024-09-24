@@ -188,10 +188,14 @@ class RpcRun:
         if not self.last_fm or not self.user_id:
             return
 
-        async with aiofiles.open("../.lastfm_keys.json") as f:
-            users = json.loads(await f.read())
+        try:
+            async with aiofiles.open("./.lastfm_keys.json") as f:
+                users = json.loads(await f.read())
+        except FileNotFoundError:
+            users = None
 
         if not (fmdata:=users.get(self.user_id)):
+            print("Scrobble ignorado devido ao usuário não ter autenticado uma conta no last.fm (use o start_lastfm_auth pra isso).")
             return
 
         print(f"Iniciando scrobble: {query}")
