@@ -70,7 +70,9 @@ class SpotifyClient:
         self.token_refresh = True
 
         try:
-            if not self.client_id or not self.client_secret:
+
+            if self.type == "visitor":
+
                 access_token_url = "https://open.spotify.com/get_access_token?reason=transport&productType=embed"
                 async with ClientSession() as session:
                     async with session.get(access_token_url) as response:
