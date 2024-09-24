@@ -12,6 +12,7 @@ import aiofiles
 import emoji
 import psutil
 from discoIPC.ipc import DiscordIPC
+from moviepy.video.io.VideoFileClip import VideoFileClip
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
@@ -300,10 +301,10 @@ class RpcRun:
                         "small_image": self.player_icon,
 
                     },
-                    "type": ActivityType.listening.value,
+                    "type": self.activity_type,
                     "buttons": [
                         {
-                            "label": "Listen on Youtube",
+                            "label": "Listen" if self.activity_type == ActivityType.listening.value else "Watch" + " on Youtube",
                             "url": f"https://www.youtube.com/watch?v={self.video_id}&list={self.playlist_id}{playlist_data.get(self.video_id, '')}"
                         },
                         {
@@ -370,21 +371,22 @@ class RpcRun:
                 self.playlist_id = playlist_info["id"]
 
                 if o.path.endswith(".mp3"):
-                    func = MP3
-                    kw = {"ID3": EasyID3}
+                    tags = MP3(o.path, ID3=EasyID3)
+                    self.track_name = tags["title"][0]
+                    self.author = tags["artist"][0]
+                    self.track_duration = tags.info.length
+                    self.activity_type = ActivityType.listening.value
+                    try:
+                        self.track_number = tags.get("tracknumber")[0]
+                    except:
+                        self.track_number = None
                 else:
-                    func = MP4
-                    kw = {}
-
-                tags = func(o.path, **kw)
-                self.track_name = tags["title"][0]
-                self.author = tags["artist"][0]
-                self.track_duration = tags.info.length
-
-                try:
-                    self.track_number = tags.get("tracknumber")[0]
-                except:
-                    self.track_number = None
+                    tags = MP4(o.path)
+                    self.track_name = tags.get("\xa9nam")[0]
+                    self.author = tags.get("\xa9ART")[0]
+                    self.track_number = tags.get('trac')[0]
+                    self.track_duration = VideoFileClip(o.path).duration
+                    self.activity_type = ActivityType.watching.value
 
                 self.video_id = yt_id.group()
                 self.process = proc

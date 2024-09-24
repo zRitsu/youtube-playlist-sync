@@ -202,7 +202,7 @@ class LastFM:
 
             data[user_id] = {"username": username, "key": key}
 
-            with open("../.lastfm_keys.json", "w", encoding="utf-8") as f:
+            with open("./.lastfm_keys.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
             print(f"Usuário do last.fm autorizado com sucesso: {username}")
             return
