@@ -173,6 +173,7 @@ cython_debug/
 /playlists_links_video.txt
 /playlists_audio/
 /playlists_video/
+/scrobbles/
 *.mp3
 *.mp4
 .lastfm_keys.json

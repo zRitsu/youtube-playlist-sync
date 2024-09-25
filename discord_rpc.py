@@ -2,9 +2,11 @@ import asyncio
 import enum
 import json
 import os
+import pickle
 import re
 import sys
 import tempfile
+import time
 import traceback
 from typing import Optional
 
@@ -203,6 +205,7 @@ class RpcRun:
 
         if not (fmdata:=users.get(self.user_id)):
             print("Scrobble ignorado devido ao usuário não ter autenticado uma conta no last.fm (use o start_lastfm_auth pra isso).")
+            self.save_scrobble(query, self.user_id)
             return
 
         print(f"Iniciando scrobble: {query}")
@@ -244,6 +247,7 @@ class RpcRun:
         if not data:
             self.last_fm.cache[query] = {}
             print(f"Scrobble ignorado: {query}")
+            self.save_scrobble(query, self.user_id)
             return
 
         await self.last_fm.track_scrobble(
@@ -252,6 +256,21 @@ class RpcRun:
         )
 
         print(f"Scroble efetuado com sucesso: {query}")
+
+    def save_scrobble(self, query: str, user_id: str):
+
+        os.makedirs("./scrobbles", exist_ok=True)
+
+        try:
+            with open(f"./scrobbles/{user_id}.pkl", "rb") as f:
+                scrobbles = pickle.load(f)
+        except FileNotFoundError:
+            scrobbles = []
+
+        scrobbles.append([query, time.time()])
+
+        with open(f"./scrobbles/{user_id}.pkl", "wb") as f:
+            pickle.dump(scrobbles, f)
 
     async def start_loop(self):
 
