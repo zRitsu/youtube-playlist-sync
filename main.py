@@ -418,11 +418,16 @@ def download_video(name: str, counter: int, yt_id: str, args, playlist_dir: str,
 
     if filepath:
         try:
-
-            audio_tag = MP3(filepath, ID3=EasyID3)
-            audio_tag["tracknumber"] = f"{track_counter}/{total_entries_original}"
-            audio_tag.save()
-
+            if ext == "mp3":
+                tag = MP3(filepath, ID3=EasyID3)
+                tag["tracknumber"] = f"{track_counter}/{total_entries_original}"
+            else:
+                tag = MP4(filepath)
+                try:
+                    tag['trac'][0] = f"{track_counter}/{total_entries_original}"
+                except KeyError:
+                    tag['trac'] = [f"{track_counter}/{total_entries_original}"]
+            tag.save()
             shutil.move(filepath, f"{playlist_dir}/{os.path.basename(filepath)}")
             save_m3u(f"{out_dir}/{sanitize_filename(playlist_name)} - {playlist_id}.m3u")
         except FileNotFoundError:
